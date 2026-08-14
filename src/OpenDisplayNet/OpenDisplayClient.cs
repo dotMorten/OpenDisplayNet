@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using System.Buffers.Binary;
+using System.Drawing;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using Windows.Devices.Bluetooth;
@@ -145,6 +146,24 @@ public sealed class OpenDisplayClient : IDisposable
         }
 
         await SendImageAsync(pixels, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Converts a bitmap to the connected panel's color scheme and uploads it.</summary>
+    public async Task SendBitmapAsync(Bitmap bitmap, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(bitmap);
+        OpenDisplayPanelSize panelSize = await GetPanelSizeAsync(cancellationToken).ConfigureAwait(false);
+        await SendImageAsync(
+            OpenDisplayBitmapEncoder.Encode(bitmap, panelSize),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Loads, converts, and uploads an image file to the connected panel.</summary>
+    public async Task SendBitmapAsync(string imagePath, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);
+        using Bitmap bitmap = new(imagePath);
+        await SendBitmapAsync(bitmap, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Reads the panel dimensions from the device's OpenDisplay configuration.</summary>

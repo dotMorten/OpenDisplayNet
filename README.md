@@ -11,34 +11,36 @@ content on e-paper displays.
 - Discover advertising and paired OpenDisplay BLE devices.
 - Read display configuration, panel dimensions, firmware information, sensors,
   and manufacturer data.
-- Upload monochrome or caller-encoded images through Direct Write or negotiated
-  `PIPE_WRITE`, with firmware-compatible compression.
+- Upload `System.Drawing.Bitmap` instances or image files with panel-aware
+  palette reduction and ordered dithering, or send caller-encoded frames through
+  Direct Write or negotiated `PIPE_WRITE`.
 - Authenticate encrypted sessions, send partial updates, and control LEDs and
   buzzers.
 
 ## Quick start
 
-Discover a device, connect to it, and send an MSB-first 1-bit image:
+Discover a device, connect to it, and upload a bitmap. The library resizes it
+to the panel and converts it to the panel's configured color scheme:
 
 ```csharp
+using System.Drawing;
 using OpenDisplayNet;
 
 IReadOnlyList<OpenDisplayDevice> devices = await OpenDisplayDiscovery
     .DiscoverAsync(TimeSpan.FromSeconds(10));
 
 OpenDisplayDevice device = devices.First();
-await using OpenDisplayClient client = await OpenDisplayClient.ConnectAsync(device);
+using OpenDisplayClient client = await OpenDisplayClient.ConnectAsync(device);
 
-OpenDisplayPanelSize panel = await client.GetPanelSizeAsync();
-int stride = (panel.Width + 7) / 8;
-byte[] whiteFrame = Enumerable.Repeat((byte)0xFF, stride * panel.Height).ToArray();
+using Bitmap image = new("dashboard.png");
+await client.SendBitmapAsync(image);
 
-await client.SendMonochromeImageAsync(panel.Width, panel.Height, whiteFrame);
+// Or load directly from a file.
+await client.SendBitmapAsync("dashboard.png");
 ```
 
-For Gray4 and color panels, encode the image according to the panel's
-`ColorScheme` and call `SendImageAsync`. The interactive test application
-demonstrates configuration-aware test-pattern generation.
+`SendImageAsync` remains available when an application needs to upload a
+caller-encoded frame directly.
 
 ## Projects
 
