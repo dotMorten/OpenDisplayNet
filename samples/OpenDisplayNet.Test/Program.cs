@@ -163,7 +163,7 @@ static void WriteDeviceInformation(
     Console.WriteLine($"  MCU chip temperature: {manufacturerData.ChipTemperatureCelsius:F1} C");
     Console.WriteLine($"  Battery voltage: {manufacturerData.BatteryMillivolts} mV");
     Console.WriteLine(
-        $"  Manufacturer data format: {manufacturerData.Format}, loop counter: {manufacturerData.LoopCounter}, " +
+        $"  Loop counter: {manufacturerData.LoopCounter}, " +
         $"rebooted: {manufacturerData.Rebooted?.ToString() ?? "not reported"}, " +
         $"connection requested: {manufacturerData.ConnectionRequested?.ToString() ?? "not reported"}");
 

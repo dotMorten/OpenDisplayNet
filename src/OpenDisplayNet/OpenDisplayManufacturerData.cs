@@ -1,18 +1,7 @@
 namespace OpenDisplayNet;
 
-/// <summary>Identifies the wire layout used by OpenDisplay manufacturer data.</summary>
-public enum OpenDisplayManufacturerDataFormat
-{
-    /// <summary>The original 11-byte manufacturer-data layout.</summary>
-    Legacy,
-
-    /// <summary>The current 14-byte manufacturer-data layout.</summary>
-    Version1,
-}
-
 /// <summary>Contains telemetry decoded from an OpenDisplay manufacturer-data record.</summary>
 public sealed record OpenDisplayManufacturerData(
-    OpenDisplayManufacturerDataFormat Format,
     int BatteryMillivolts,
     double ChipTemperatureCelsius,
     byte LoopCounter,
@@ -33,7 +22,6 @@ public sealed record OpenDisplayManufacturerData(
         if (payload.Length == 11)
         {
             return new OpenDisplayManufacturerData(
-                OpenDisplayManufacturerDataFormat.Legacy,
                 payload[7] | (payload[8] << 8),
                 (sbyte)payload[9],
                 payload[10],
@@ -47,7 +35,6 @@ public sealed record OpenDisplayManufacturerData(
         {
             byte status = payload[13];
             return new OpenDisplayManufacturerData(
-                OpenDisplayManufacturerDataFormat.Version1,
                 (payload[12] | ((status & 1) << 8)) * 10,
                 payload[11] / 2d - 40d,
                 (byte)(status >> 4),

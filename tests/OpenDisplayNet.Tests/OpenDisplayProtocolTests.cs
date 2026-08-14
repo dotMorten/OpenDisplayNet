@@ -252,7 +252,6 @@ public sealed class OpenDisplayProtocolTests
             OpenDisplayProtocol.ParseFirmwareVersion([0x80, 0x43, 2, 25, 3, (byte)'a', (byte)'b', (byte)'c', 1]));
         OpenDisplayManufacturerData manufacturerRecord = OpenDisplayProtocol.ParseManufacturerData(
             [0x00, 0x44, 0x46, 0x24, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 120, 0x23, 0xA7]);
-        Assert.Equal(OpenDisplayManufacturerDataFormat.Version1, manufacturerRecord.Format);
         Assert.Equal(2910, manufacturerRecord.BatteryMillivolts);
         Assert.Equal(20, manufacturerRecord.ChipTemperatureCelsius);
         Assert.Equal((byte)10, manufacturerRecord.LoopCounter);
@@ -282,7 +281,6 @@ public sealed class OpenDisplayProtocolTests
         OpenDisplayManufacturerData manufacturerData = OpenDisplayManufacturerData.Parse(
             [0, 0, 0, 0, 0, 0, 0, 0xBC, 0x0A, unchecked((byte)-5), 42]);
 
-        Assert.Equal(OpenDisplayManufacturerDataFormat.Legacy, manufacturerData.Format);
         Assert.Equal(2748, manufacturerData.BatteryMillivolts);
         Assert.Equal(-5, manufacturerData.ChipTemperatureCelsius);
         Assert.Equal((byte)42, manufacturerData.LoopCounter);
