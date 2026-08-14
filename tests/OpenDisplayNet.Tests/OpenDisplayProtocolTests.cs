@@ -250,9 +250,15 @@ public sealed class OpenDisplayProtocolTests
         Assert.Equal(
             new OpenDisplayFirmwareVersion(2, 25, "abc", 1),
             OpenDisplayProtocol.ParseFirmwareVersion([0x80, 0x43, 2, 25, 3, (byte)'a', (byte)'b', (byte)'c', 1]));
-        Assert.Equal(
-            Enumerable.Range(0, 16).Select(value => (byte)value).ToArray(),
-            OpenDisplayProtocol.ParseManufacturerData([0x00, 0x44, .. Enumerable.Range(0, 16).Select(value => (byte)value)]));
+        OpenDisplayManufacturerData manufacturerRecord = OpenDisplayProtocol.ParseManufacturerData(
+            [0x00, 0x44, 0x46, 0x24, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 120, 0x23, 0xA7]);
+        Assert.Equal(OpenDisplayManufacturerDataFormat.Version1, manufacturerRecord.Format);
+        Assert.Equal(2910, manufacturerRecord.BatteryMillivolts);
+        Assert.Equal(20, manufacturerRecord.ChipTemperatureCelsius);
+        Assert.Equal((byte)10, manufacturerRecord.LoopCounter);
+        Assert.True(manufacturerRecord.Rebooted);
+        Assert.True(manufacturerRecord.ConnectionRequested);
+        Assert.Equal(Enumerable.Range(0, 11).Select(value => (byte)value).ToArray(), manufacturerRecord.DynamicData.ToArray());
 
         byte[] configuration = new byte[3 + 2 + 30 + 2];
         configuration[3] = 0;

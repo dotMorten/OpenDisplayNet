@@ -243,8 +243,8 @@ public sealed class OpenDisplayClient : IAsyncDisposable
                 }
             }
 
-    /// <summary>Reads the 16-byte manufacturer-specific data record broadcast by the device.</summary>
-    public async Task<byte[]> GetManufacturerDataAsync(CancellationToken cancellationToken = default)
+    /// <summary>Reads the manufacturer-specific telemetry record broadcast by the device.</summary>
+    public async Task<OpenDisplayManufacturerData> GetManufacturerDataAsync(CancellationToken cancellationToken = default)
             {
                 ThrowIfDisposed();
                 await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -266,8 +266,8 @@ public sealed class OpenDisplayClient : IAsyncDisposable
                 try
                 {
                     byte[] configuration = await ReadConfigurationAsync(cancellationToken).ConfigureAwait(false);
-                    byte[] manufacturerData = await ReadManufacturerDataAsync(cancellationToken).ConfigureAwait(false);
-                    return OpenDisplayProtocol.ReadSht40Sensors(configuration, manufacturerData);
+                    OpenDisplayManufacturerData manufacturerData = await ReadManufacturerDataAsync(cancellationToken).ConfigureAwait(false);
+                    return OpenDisplayProtocol.ReadSht40Sensors(configuration, manufacturerData.RawData.Span);
                 }
                 finally
                 {
@@ -896,7 +896,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
         return configuration.Take(totalLength).ToArray();
     }
 
-    private async Task<byte[]> ReadManufacturerDataAsync(CancellationToken cancellationToken)
+    private async Task<OpenDisplayManufacturerData> ReadManufacturerDataAsync(CancellationToken cancellationToken)
     {
         ClearNotifications();
         await WriteAsync(
