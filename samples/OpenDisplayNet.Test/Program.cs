@@ -53,30 +53,24 @@ try
     await using OpenDisplayClient client = await OpenDisplayClient.ConnectAsync(selectedDevice, cancellation.Token);
 
     OpenDisplayPanelSize panelSize = await client.GetPanelSizeAsync(cancellation.Token);
-    Console.WriteLine($"Panel: {panelSize.Width}x{panelSize.Height}, color scheme {panelSize.ColorScheme}");
+    OpenDisplayFirmwareVersion firmware = await client.GetFirmwareVersionAsync(cancellation.Token);
+    byte[] manufacturerData = await client.GetManufacturerDataAsync(cancellation.Token);
+    IReadOnlyList<OpenDisplaySensorReading> sensors = await client.ReadSensorsAsync(cancellation.Token);
+    WriteDeviceInformation(selectedDevice, panelSize, firmware, manufacturerData, sensors);
     if (args.Contains("--inspect", StringComparer.OrdinalIgnoreCase))
     {
         return;
     }
 
-    Console.WriteLine($"Sending a {panelSize.Width}x{panelSize.Height} test pattern...");
-    switch (panelSize.ColorScheme)
+    Console.WriteLine($"Sending a {panelSize.Width}x{panelSize.Height} {panelSize.ColorScheme} test pattern...");
+    byte[] testPattern = CreateTestPattern(panelSize);
+    if (panelSize.ColorScheme == OpenDisplayColorScheme.Monochrome)
     {
-        case OpenDisplayColorScheme.Monochrome:
-            await client.SendMonochromeImageAsync(
-                panelSize.Width,
-                panelSize.Height,
-                CreateTestPattern(panelSize.Width, panelSize.Height),
-                cancellation.Token);
-            break;
-        case OpenDisplayColorScheme.Gray4:
-            await client.SendImageAsync(
-                CreateGray4TestPattern(panelSize.Width, panelSize.Height),
-                cancellation.Token);
-            break;
-        default:
-            throw new NotSupportedException(
-                $"The test app does not yet encode OpenDisplay color scheme {panelSize.ColorScheme}.");
+        await client.SendMonochromeImageAsync(panelSize.Width, panelSize.Height, testPattern, cancellation.Token);
+    }
+    else
+    {
+        await client.SendImageAsync(testPattern, cancellation.Token);
     }
 
     Console.WriteLine("Test pattern sent.");
@@ -151,7 +145,59 @@ static OpenDisplayDevice? ReadSelection(List<OpenDisplayDevice> devices, object 
     }
 }
 
-static byte[] CreateTestPattern(int width, int height)
+static void WriteDeviceInformation(
+    OpenDisplayDevice device,
+    OpenDisplayPanelSize panelSize,
+    OpenDisplayFirmwareVersion firmware,
+    ReadOnlySpan<byte> manufacturerData,
+    IReadOnlyList<OpenDisplaySensorReading> sensors)
+{
+    Console.WriteLine();
+    Console.WriteLine("Device information");
+    Console.WriteLine($"  Name: {device.Name}");
+    Console.WriteLine($"  Bluetooth address: {device.BluetoothAddress:X12} ({device.BluetoothAddressType})");
+    Console.WriteLine($"  Signal strength: {(device.Rssi is { } rssi ? $"{rssi} dBm" : "unknown")}");
+    Console.WriteLine($"  Panel: {panelSize.Width}x{panelSize.Height}, {panelSize.ColorScheme} ({(byte)panelSize.ColorScheme})");
+    Console.WriteLine($"  Firmware: {firmware.Major}.{firmware.Minor}.{firmware.Patch} ({firmware.Sha})");
+    Console.WriteLine($"  Manufacturer data: {Convert.ToHexString(manufacturerData)}");
+
+    if (sensors.Count == 0)
+    {
+        Console.WriteLine("  Sensors: none reported");
+        return;
+    }
+
+    Console.WriteLine("  Sensors:");
+    foreach (OpenDisplaySensorReading sensor in sensors)
+    {
+        Console.WriteLine(
+            $"    {sensor.InstanceNumber}: {sensor.SensorType} ({(ushort)sensor.SensorType}), " +
+            $"{sensor.TemperatureCelsius:F1} C, {sensor.HumidityPercent:F1}% RH");
+    }
+}
+
+static byte[] CreateTestPattern(OpenDisplayPanelSize panelSize)
+    => panelSize.ColorScheme switch
+    {
+        OpenDisplayColorScheme.Monochrome => CreateMonochromeTestPattern(panelSize.Width, panelSize.Height),
+        OpenDisplayColorScheme.BlackWhiteRed => CreateThreeColorTestPattern(panelSize.Width, panelSize.Height, red: true),
+        OpenDisplayColorScheme.BlackWhiteYellow => CreateThreeColorTestPattern(panelSize.Width, panelSize.Height, red: false),
+        OpenDisplayColorScheme.BlackWhiteRedYellow => CreatePackedTestPattern(panelSize.Width, panelSize.Height, 2, 4),
+        OpenDisplayColorScheme.SixColor => CreatePackedTestPattern(
+            panelSize.Width,
+            panelSize.Height,
+            4,
+            6,
+            [0, 1, 2, 3, 5, 6]),
+        OpenDisplayColorScheme.Gray4 => CreateGray4TestPattern(panelSize.Width, panelSize.Height),
+        OpenDisplayColorScheme.Gray16 => CreatePackedTestPattern(panelSize.Width, panelSize.Height, 4, 16),
+        OpenDisplayColorScheme.SevenColor => CreatePackedTestPattern(panelSize.Width, panelSize.Height, 4, 7),
+        OpenDisplayColorScheme.SixColorSplit => CreateSixColorSplitTestPattern(panelSize.Width, panelSize.Height),
+        _ => throw new NotSupportedException(
+            $"The test app does not yet encode OpenDisplay color scheme {panelSize.ColorScheme} ({(byte)panelSize.ColorScheme})."),
+    };
+
+static byte[] CreateMonochromeTestPattern(int width, int height)
 {
     int stride = (width + 7) / 8;
     byte[] pixels = new byte[checked(stride * height)];
@@ -171,7 +217,7 @@ static byte[] CreateTestPattern(int width, int height)
     return pixels;
 }
 
-static byte[] CreateGray4TestPattern(int width, int height)
+static byte[] CreateThreeColorTestPattern(int width, int height, bool red)
 {
     int stride = (width + 7) / 8;
     int planeLength = checked(stride * height);
@@ -181,19 +227,91 @@ static byte[] CreateGray4TestPattern(int width, int height)
     {
         for (int x = 0; x < width; x++)
         {
-            if (!IsTestPatternPixelBlack(x, y, width, height))
-            {
-                continue;
-            }
-
-            byte mask = (byte)(0x80 >> (x % 8));
-            int offset = y * stride + (x / 8);
-            pixels[offset] |= mask;
-            pixels[planeLength + offset] |= mask;
+            int color = GetPatternColor(x, y, width, 3);
+            bool blackWhitePlane = color == 1 || (red && color == 2);
+            bool accentPlane = color == 2;
+            SetPlanePixel(pixels, 0, planeLength, x, y, stride, blackWhitePlane);
+            SetPlanePixel(pixels, 1, planeLength, x, y, stride, accentPlane);
         }
     }
 
     return pixels;
+}
+
+static byte[] CreateGray4TestPattern(int width, int height)
+{
+    int stride = (width + 7) / 8;
+    int planeLength = checked(stride * height);
+    byte[] pixels = new byte[planeLength * 2];
+    ReadOnlySpan<byte> grayCodes = [3, 1, 2, 0];
+
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            byte code = grayCodes[GetPatternColor(x, y, width, 4)];
+            SetPlanePixel(pixels, 0, planeLength, x, y, stride, (code & 1) != 0);
+            SetPlanePixel(pixels, 1, planeLength, x, y, stride, (code & 2) != 0);
+        }
+    }
+
+    return pixels;
+}
+
+static byte[] CreateSixColorSplitTestPattern(int width, int height)
+{
+    int split = width / 2;
+    return
+    [
+        .. CreatePackedTestPattern(split, height, 4, 6, [0, 1, 2, 3, 5, 6], 0),
+        .. CreatePackedTestPattern(width - split, height, 4, 6, [0, 1, 2, 3, 5, 6], split),
+    ];
+}
+
+static byte[] CreatePackedTestPattern(
+    int width,
+    int height,
+    int bitsPerPixel,
+    int colorCount,
+    ReadOnlySpan<byte> colorCodes = default,
+    int xOffset = 0)
+{
+    int pixelsPerByte = 8 / bitsPerPixel;
+    int stride = (width + pixelsPerByte - 1) / pixelsPerByte;
+    byte[] pixels = new byte[checked(stride * height)];
+
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            int color = GetPatternColor(x + xOffset, y, width + xOffset, colorCount);
+            byte code = colorCodes.IsEmpty ? (byte)color : colorCodes[color];
+            int shift = 8 - bitsPerPixel * ((x % pixelsPerByte) + 1);
+            pixels[y * stride + (x / pixelsPerByte)] |= (byte)(code << shift);
+        }
+    }
+
+    return pixels;
+}
+
+static int GetPatternColor(int x, int y, int width, int colorCount)
+    => (x * colorCount / width + y / 32) % colorCount;
+
+static void SetPlanePixel(
+    Span<byte> pixels,
+    int plane,
+    int planeLength,
+    int x,
+    int y,
+    int stride,
+    bool value)
+{
+    if (!value)
+    {
+        return;
+    }
+
+    pixels[plane * planeLength + y * stride + (x / 8)] |= (byte)(0x80 >> (x % 8));
 }
 
 static bool IsTestPatternPixelBlack(int x, int y, int width, int height)
