@@ -142,6 +142,15 @@ public sealed class OpenDisplayProtocolPortedTests
     }
 
     [Fact]
+    public void Sht40Sensors_SkipsExtendedDataConfiguration()
+    {
+        byte[] configuration = new byte[3 + 2 + 288 + 2];
+        configuration[4] = 0x2C;
+
+        Assert.Empty(OpenDisplayProtocol.ReadSht40Sensors(configuration, new byte[16]));
+    }
+
+    [Fact]
     public void LedFlashConfiguration_SerializesAllStepsAndSpecialRepeatValues()
     {
         OpenDisplayLedFlashConfig configuration = new(

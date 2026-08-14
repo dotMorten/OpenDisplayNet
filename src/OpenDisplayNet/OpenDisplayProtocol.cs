@@ -650,6 +650,7 @@ internal static class OpenDisplayProtocol
         [0x29] = 32,
         [0x2A] = 32,
         [0x2B] = 32,
+        [0x2C] = 288,
     };
 }
 
