@@ -184,12 +184,14 @@ sealed class App : Component
                 TextBlock(imagePath is null ? "No image selected." : $"Selected image: {imagePath}"),
 
                 Heading("3. Convert and upload").FontSize(20),
-                ComboBox(["None", "Fill", "Uniform", "UniformToFill"], fitIndex, setFitIndex)
-                    .Header("Image fit")
-                    .IsEnabled(!isBusy),
-                ComboBox(["No dithering", "Ordered dithering"], ditheringIndex, setDitheringIndex)
-                    .Header("Palette reduction")
-                    .IsEnabled(!isBusy),
+                HStack(8,
+                    ComboBox(["None", "Fill", "Uniform", "UniformToFill"], fitIndex, setFitIndex)
+                        .Header("Image fit")
+                        .IsEnabled(!isBusy),
+                    ComboBox(["No dithering", "Ordered dithering"], ditheringIndex, setDitheringIndex)
+                        .Header("Palette reduction")
+                        .IsEnabled(!isBusy)
+                ),
                 Button("Send image", async () =>
                 {
                     if (client is null || imagePath is null)
