@@ -54,7 +54,7 @@ await client.SendImageAsync(encodedImage);
 | Project | Purpose |
 | --- | --- |
 | `src/OpenDisplayNet` | The Windows BLE client library. |
-| `samples/OpenDisplayNet.Test` | Interactive display discovery and test-pattern uploader. |
+| `samples/ConsoleTest` | Interactive display discovery and test-pattern uploader. |
 | `tests/OpenDisplayNet.Tests` | Protocol serialization and parsing tests. |
 
 ## Build and run
@@ -62,7 +62,7 @@ await client.SendImageAsync(encodedImage);
 ```powershell
 dotnet build OpenDisplayNet.slnx
 dotnet test OpenDisplayNet.slnx
-dotnet run --project samples\OpenDisplayNet.Test\OpenDisplayNet.Test.csproj
+dotnet run --project samples\ConsoleTest\ConsoleTest.csproj
 ```
 
 The test application scans until a device is selected, reads its panel
