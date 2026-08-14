@@ -10,8 +10,7 @@ public sealed record OpenDisplayManufacturerData(
     ReadOnlyMemory<byte> DynamicData,
     ReadOnlyMemory<byte> RawData)
 {
-    /// <summary>Decodes a legacy or version 1 OpenDisplay manufacturer-data record.</summary>
-    public static OpenDisplayManufacturerData Parse(ReadOnlySpan<byte> manufacturerData)
+    internal static OpenDisplayManufacturerData Parse(ReadOnlySpan<byte> manufacturerData)
     {
         ReadOnlySpan<byte> payload = manufacturerData;
         if (payload.Length >= 2 && payload[0] == 0x46 && payload[1] == 0x24)
