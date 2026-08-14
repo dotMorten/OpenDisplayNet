@@ -145,25 +145,20 @@ public sealed class OpenDisplayClient : IDisposable
                 nameof(pixels));
         }
 
-        await SendImageAsync(pixels, cancellationToken).ConfigureAwait(false);
+        await SendEncodedImageAsync(pixels, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Converts a bitmap to the connected panel's color scheme and uploads it.</summary>
-    public async Task SendBitmapAsync(Bitmap bitmap, CancellationToken cancellationToken = default)
+    /// <summary>Converts and uploads an OpenDisplay image to the connected panel.</summary>
+    public async Task SendImageAsync(OpenDisplayImage image, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(bitmap);
-        OpenDisplayPanelSize panelSize = await GetPanelSizeAsync(cancellationToken).ConfigureAwait(false);
-        await SendImageAsync(
-            OpenDisplayBitmapEncoder.Encode(bitmap, panelSize),
-            cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>Loads, converts, and uploads an image file to the connected panel.</summary>
-    public async Task SendBitmapAsync(string imagePath, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);
-        using Bitmap bitmap = new(imagePath);
-        await SendBitmapAsync(bitmap, cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(image);
+        ReadOnlyMemory<byte> pixels = image.IsEncoded
+            ? image.EncodedPixels
+            : OpenDisplayBitmapEncoder.Encode(
+                image.Bitmap,
+                await GetPanelSizeAsync(cancellationToken).ConfigureAwait(false),
+                image.Options);
+        await SendEncodedImageAsync(pixels, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Reads the panel dimensions from the device's OpenDisplay configuration.</summary>
@@ -317,7 +312,7 @@ public sealed class OpenDisplayClient : IDisposable
     /// <summary>
     /// Sends a pre-encoded OpenDisplay image. The byte sequence must match the connected panel's color scheme.
     /// </summary>
-    public async Task SendImageAsync(
+    private async Task SendEncodedImageAsync(
         ReadOnlyMemory<byte> image,
         CancellationToken cancellationToken = default)
     {

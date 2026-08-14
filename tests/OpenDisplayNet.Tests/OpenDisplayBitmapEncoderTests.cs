@@ -60,8 +60,24 @@ public sealed class OpenDisplayBitmapEncoderTests
             Encode(bitmap, OpenDisplayColorScheme.Rgb16BitsPerChannel));
     }
 
+    [Fact]
+    public void CropFit_CenterCropsWithoutRescaling()
+    {
+        using Bitmap bitmap = CreateBitmap(4, 1, [Color.Black, Color.White, Color.Black, Color.White]);
+
+        Assert.Equal(
+            [0x80],
+            OpenDisplayBitmapEncoder.Encode(
+                bitmap,
+                new OpenDisplayPanelSize(2, 1, OpenDisplayColorScheme.Monochrome),
+                new OpenDisplayImageOptions(OpenDisplayImageFit.Crop, OpenDisplayDithering.None)));
+    }
+
     private static byte[] Encode(Bitmap bitmap, OpenDisplayColorScheme colorScheme)
-        => OpenDisplayBitmapEncoder.Encode(bitmap, new OpenDisplayPanelSize(bitmap.Width, bitmap.Height, colorScheme));
+        => OpenDisplayBitmapEncoder.Encode(
+            bitmap,
+            new OpenDisplayPanelSize(bitmap.Width, bitmap.Height, colorScheme),
+            new OpenDisplayImageOptions(Dithering: OpenDisplayDithering.None));
 
     private static Bitmap CreateBitmap(int width, int height, IReadOnlyList<Color> pixels)
     {

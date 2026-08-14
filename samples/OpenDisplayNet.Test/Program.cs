@@ -70,7 +70,8 @@ try
     }
     else
     {
-        await client.SendImageAsync(testPattern, cancellation.Token);
+        using OpenDisplayImage image = new(testPattern);
+        await client.SendImageAsync(image, cancellation.Token);
     }
 
     Console.WriteLine("Test pattern sent.");

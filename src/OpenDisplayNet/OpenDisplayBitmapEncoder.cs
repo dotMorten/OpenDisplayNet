@@ -21,20 +21,20 @@ internal static class OpenDisplayBitmapEncoder
         15,  7, 13,  5,
     ];
 
-    public static byte[] Encode(Bitmap bitmap, OpenDisplayPanelSize panelSize)
+    public static byte[] Encode(Bitmap bitmap, OpenDisplayPanelSize panelSize, OpenDisplayImageOptions options)
     {
-        using Bitmap scaled = Scale(bitmap, panelSize.Width, panelSize.Height);
+        using Bitmap scaled = Scale(bitmap, panelSize.Width, panelSize.Height, options.Fit);
         return panelSize.ColorScheme switch
         {
-            OpenDisplayColorScheme.Monochrome => EncodeMonochrome(scaled),
-            OpenDisplayColorScheme.BlackWhiteRed => EncodeThreeColor(scaled, RedPalette, red: true),
-            OpenDisplayColorScheme.BlackWhiteYellow => EncodeThreeColor(scaled, YellowPalette, red: false),
-            OpenDisplayColorScheme.BlackWhiteRedYellow => EncodePacked(scaled, RedYellowPalette, 2),
-            OpenDisplayColorScheme.SixColor => EncodePacked(scaled, SixColorPalette, 4, SixColorCodes),
-            OpenDisplayColorScheme.Gray4 => EncodeGray4(scaled),
-            OpenDisplayColorScheme.Gray16 => EncodeGray16(scaled),
-            OpenDisplayColorScheme.SevenColor => EncodePacked(scaled, SevenColorPalette, 4),
-            OpenDisplayColorScheme.SixColorSplit => EncodeSixColorSplit(scaled),
+            OpenDisplayColorScheme.Monochrome => EncodeMonochrome(scaled, options.Dithering),
+            OpenDisplayColorScheme.BlackWhiteRed => EncodeThreeColor(scaled, RedPalette, red: true, options.Dithering),
+            OpenDisplayColorScheme.BlackWhiteYellow => EncodeThreeColor(scaled, YellowPalette, red: false, options.Dithering),
+            OpenDisplayColorScheme.BlackWhiteRedYellow => EncodePacked(scaled, RedYellowPalette, 2, options.Dithering),
+            OpenDisplayColorScheme.SixColor => EncodePacked(scaled, SixColorPalette, 4, options.Dithering, SixColorCodes),
+            OpenDisplayColorScheme.Gray4 => EncodeGray4(scaled, options.Dithering),
+            OpenDisplayColorScheme.Gray16 => EncodeGray16(scaled, options.Dithering),
+            OpenDisplayColorScheme.SevenColor => EncodePacked(scaled, SevenColorPalette, 4, options.Dithering),
+            OpenDisplayColorScheme.SixColorSplit => EncodeSixColorSplit(scaled, options.Dithering),
             OpenDisplayColorScheme.Rgb565 => EncodeRgb565(scaled),
             OpenDisplayColorScheme.Rgb888 => EncodeRgb888(scaled),
             OpenDisplayColorScheme.Rgb16BitsPerChannel => EncodeRgb16BitsPerChannel(scaled),
@@ -42,7 +42,7 @@ internal static class OpenDisplayBitmapEncoder
         };
     }
 
-    private static Bitmap Scale(Bitmap source, int width, int height)
+    private static Bitmap Scale(Bitmap source, int width, int height, OpenDisplayImageFit fit)
     {
         if (width <= 0 || height <= 0)
         {
@@ -60,11 +60,46 @@ internal static class OpenDisplayBitmapEncoder
         graphics.CompositingQuality = CompositingQuality.HighQuality;
         graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
         graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-        graphics.DrawImage(source, new Rectangle(0, 0, width, height));
+        if (fit == OpenDisplayImageFit.Crop)
+        {
+            int sourceWidth = Math.Min(source.Width, width);
+            int sourceHeight = Math.Min(source.Height, height);
+            Rectangle sourceRectangle = new(
+                (source.Width - sourceWidth) / 2,
+                (source.Height - sourceHeight) / 2,
+                sourceWidth,
+                sourceHeight);
+            Rectangle destinationRectangle = new(
+                (width - sourceWidth) / 2,
+                (height - sourceHeight) / 2,
+                sourceWidth,
+                sourceHeight);
+            graphics.DrawImage(source, destinationRectangle, sourceRectangle, GraphicsUnit.Pixel);
+            return scaled;
+        }
+
+        Rectangle destination = fit switch
+        {
+            OpenDisplayImageFit.Stretch => new Rectangle(0, 0, width, height),
+            OpenDisplayImageFit.Contain => FitRectangle(source.Size, new Size(width, height), cover: false),
+            OpenDisplayImageFit.Cover => FitRectangle(source.Size, new Size(width, height), cover: true),
+            _ => throw new ArgumentOutOfRangeException(nameof(fit)),
+        };
+        graphics.DrawImage(source, destination);
         return scaled;
     }
 
-    private static byte[] EncodeMonochrome(Bitmap bitmap)
+    private static Rectangle FitRectangle(Size source, Size target, bool cover)
+    {
+        double scale = cover
+            ? Math.Max((double)target.Width / source.Width, (double)target.Height / source.Height)
+            : Math.Min((double)target.Width / source.Width, (double)target.Height / source.Height);
+        int width = Math.Max(1, (int)Math.Round(source.Width * scale));
+        int height = Math.Max(1, (int)Math.Round(source.Height * scale));
+        return new Rectangle((target.Width - width) / 2, (target.Height - height) / 2, width, height);
+    }
+
+    private static byte[] EncodeMonochrome(Bitmap bitmap, OpenDisplayDithering dithering)
     {
         int stride = (bitmap.Width + 7) / 8;
         byte[] output = new byte[checked(stride * bitmap.Height)];
@@ -72,7 +107,7 @@ internal static class OpenDisplayBitmapEncoder
         {
             for (int x = 0; x < bitmap.Width; x++)
             {
-                if (GetPaletteIndex(bitmap.GetPixel(x, y), x, y, MonochromePalette) == 1)
+                if (GetPaletteIndex(bitmap.GetPixel(x, y), x, y, MonochromePalette, dithering) == 1)
                 {
                     output[y * stride + (x / 8)] |= (byte)(0x80 >> (x % 8));
                 }
@@ -82,7 +117,7 @@ internal static class OpenDisplayBitmapEncoder
         return output;
     }
 
-    private static byte[] EncodeThreeColor(Bitmap bitmap, ReadOnlySpan<Color> palette, bool red)
+    private static byte[] EncodeThreeColor(Bitmap bitmap, ReadOnlySpan<Color> palette, bool red, OpenDisplayDithering dithering)
     {
         int stride = (bitmap.Width + 7) / 8;
         int planeLength = checked(stride * bitmap.Height);
@@ -91,7 +126,7 @@ internal static class OpenDisplayBitmapEncoder
         {
             for (int x = 0; x < bitmap.Width; x++)
             {
-                int color = GetPaletteIndex(bitmap.GetPixel(x, y), x, y, palette);
+                int color = GetPaletteIndex(bitmap.GetPixel(x, y), x, y, palette, dithering);
                 bool blackWhite = color == 1 || (red && color == 2);
                 SetBit(output, y * stride + (x / 8), x, blackWhite);
                 SetBit(output, planeLength + y * stride + (x / 8), x, color == 2);
@@ -101,7 +136,7 @@ internal static class OpenDisplayBitmapEncoder
         return output;
     }
 
-    private static byte[] EncodeGray4(Bitmap bitmap)
+    private static byte[] EncodeGray4(Bitmap bitmap, OpenDisplayDithering dithering)
     {
         int stride = (bitmap.Width + 7) / 8;
         int planeLength = checked(stride * bitmap.Height);
@@ -110,7 +145,7 @@ internal static class OpenDisplayBitmapEncoder
         {
             for (int x = 0; x < bitmap.Width; x++)
             {
-                int level = GetGrayLevel(bitmap.GetPixel(x, y), x, y, 4);
+                int level = GetGrayLevel(bitmap.GetPixel(x, y), x, y, 4, dithering);
                 byte code = Gray4Codes[level];
                 SetBit(output, y * stride + (x / 8), x, (code & 1) != 0);
                 SetBit(output, planeLength + y * stride + (x / 8), x, (code & 2) != 0);
@@ -120,7 +155,7 @@ internal static class OpenDisplayBitmapEncoder
         return output;
     }
 
-    private static byte[] EncodeGray16(Bitmap bitmap)
+    private static byte[] EncodeGray16(Bitmap bitmap, OpenDisplayDithering dithering)
     {
         int width = bitmap.Width;
         int stride = (width + 1) / 2;
@@ -129,7 +164,7 @@ internal static class OpenDisplayBitmapEncoder
         {
             for (int x = 0; x < width; x++)
             {
-                int level = GetGrayLevel(bitmap.GetPixel(x, y), x, y, 16);
+                int level = GetGrayLevel(bitmap.GetPixel(x, y), x, y, 16, dithering);
                 WriteNibble(output, y * stride + (x / 2), x, (byte)level);
             }
         }
@@ -141,6 +176,7 @@ internal static class OpenDisplayBitmapEncoder
         Bitmap bitmap,
         ReadOnlySpan<Color> palette,
         int bitsPerPixel,
+        OpenDisplayDithering dithering,
         ReadOnlySpan<byte> colorCodes = default)
     {
         int pixelsPerByte = 8 / bitsPerPixel;
@@ -150,7 +186,7 @@ internal static class OpenDisplayBitmapEncoder
         {
             for (int x = 0; x < bitmap.Width; x++)
             {
-                int index = GetPaletteIndex(bitmap.GetPixel(x, y), x, y, palette);
+                int index = GetPaletteIndex(bitmap.GetPixel(x, y), x, y, palette, dithering);
                 byte value = colorCodes.IsEmpty ? (byte)index : colorCodes[index];
                 int shift = 8 - bitsPerPixel * ((x % pixelsPerByte) + 1);
                 output[y * stride + (x / pixelsPerByte)] |= (byte)(value << shift);
@@ -160,15 +196,15 @@ internal static class OpenDisplayBitmapEncoder
         return output;
     }
 
-    private static byte[] EncodeSixColorSplit(Bitmap bitmap)
+    private static byte[] EncodeSixColorSplit(Bitmap bitmap, OpenDisplayDithering dithering)
     {
         int split = bitmap.Width / 2;
         using Bitmap left = bitmap.Clone(new Rectangle(0, 0, split, bitmap.Height), bitmap.PixelFormat);
         using Bitmap right = bitmap.Clone(new Rectangle(split, 0, bitmap.Width - split, bitmap.Height), bitmap.PixelFormat);
         return
         [
-            .. EncodePacked(left, SixColorPalette, 4, SixColorCodes),
-            .. EncodePacked(right, SixColorPalette, 4, SixColorCodes),
+            .. EncodePacked(left, SixColorPalette, 4, dithering, SixColorCodes),
+            .. EncodePacked(right, SixColorPalette, 4, dithering, SixColorCodes),
         ];
     }
 
@@ -232,7 +268,7 @@ internal static class OpenDisplayBitmapEncoder
         output[offset++] = component;
     }
 
-    private static int GetPaletteIndex(Color color, int x, int y, ReadOnlySpan<Color> palette)
+    private static int GetPaletteIndex(Color color, int x, int y, ReadOnlySpan<Color> palette, OpenDisplayDithering dithering)
     {
         Color opaque = color.A == byte.MaxValue
             ? color
@@ -249,7 +285,9 @@ internal static class OpenDisplayBitmapEncoder
             }
         }
 
-        int adjustment = (Bayer4[(y & 3) * 4 + (x & 3)] - 8) * 8;
+        int adjustment = dithering == OpenDisplayDithering.Ordered
+            ? (Bayer4[(y & 3) * 4 + (x & 3)] - 8) * 8
+            : 0;
         int red = Math.Clamp(opaque.R + adjustment, 0, byte.MaxValue);
         int green = Math.Clamp(opaque.G + adjustment, 0, byte.MaxValue);
         int blue = Math.Clamp(opaque.B + adjustment, 0, byte.MaxValue);
@@ -272,7 +310,7 @@ internal static class OpenDisplayBitmapEncoder
         return bestIndex;
     }
 
-    private static int GetGrayLevel(Color color, int x, int y, int levelCount)
+    private static int GetGrayLevel(Color color, int x, int y, int levelCount, OpenDisplayDithering dithering)
     {
         int luminance = (color.R * 299 + color.G * 587 + color.B * 114) / 1000;
         if (luminance is 0 or byte.MaxValue)
@@ -280,7 +318,9 @@ internal static class OpenDisplayBitmapEncoder
             return luminance * (levelCount - 1) / byte.MaxValue;
         }
 
-        int adjustment = (Bayer4[(y & 3) * 4 + (x & 3)] - 8) * 8;
+        int adjustment = dithering == OpenDisplayDithering.Ordered
+            ? (Bayer4[(y & 3) * 4 + (x & 3)] - 8) * 8
+            : 0;
         return Math.Clamp((luminance + adjustment) * (levelCount - 1) / byte.MaxValue, 0, levelCount - 1);
     }
 

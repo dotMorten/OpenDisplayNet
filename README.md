@@ -32,15 +32,22 @@ IReadOnlyList<OpenDisplayDevice> devices = await OpenDisplayDiscovery
 OpenDisplayDevice device = devices.First();
 using OpenDisplayClient client = await OpenDisplayClient.ConnectAsync(device);
 
-using Bitmap image = new("dashboard.png");
-await client.SendBitmapAsync(image);
+using Bitmap bitmap = new("dashboard.png");
+using OpenDisplayImage image = new(bitmap);
+await client.SendImageAsync(image);
 
 // Or load directly from a file.
-await client.SendBitmapAsync("dashboard.png");
+using OpenDisplayImage fileImage = new("dashboard.png");
+await client.SendImageAsync(fileImage);
 ```
 
-`SendImageAsync` remains available when an application needs to upload a
-caller-encoded frame directly.
+Create `OpenDisplayImage` from a caller-encoded frame when conversion is
+handled elsewhere:
+
+```csharp
+using OpenDisplayImage encodedImage = new(encodedFrame);
+await client.SendImageAsync(encodedImage);
+```
 
 ## Projects
 
