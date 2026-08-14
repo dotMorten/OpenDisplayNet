@@ -5,17 +5,17 @@ namespace OpenDisplayNet;
 /// <summary>Controls how a source bitmap is fitted to an OpenDisplay panel.</summary>
 public enum OpenDisplayImageFit
 {
+    /// <summary>Do not scale the image; center it and fill unused panel space with white.</summary>
+    None,
+
     /// <summary>Resize the image to exactly fill the panel.</summary>
-    Stretch,
+    Fill,
 
     /// <summary>Preserve the aspect ratio and fill unused panel space with white.</summary>
-    Contain,
+    Uniform,
 
     /// <summary>Preserve the aspect ratio while filling and center-cropping to the panel.</summary>
-    Cover,
-
-    /// <summary>Center-crop without enlarging, filling unused panel space with white.</summary>
-    Crop,
+    UniformToFill,
 }
 
 /// <summary>Controls palette reduction when converting a bitmap for an OpenDisplay panel.</summary>
@@ -30,7 +30,7 @@ public enum OpenDisplayDithering
 
 /// <summary>Controls bitmap conversion before an image is uploaded.</summary>
 public sealed record OpenDisplayImageOptions(
-    OpenDisplayImageFit Fit = OpenDisplayImageFit.Stretch,
+    OpenDisplayImageFit Fit = OpenDisplayImageFit.Fill,
     OpenDisplayDithering Dithering = OpenDisplayDithering.Ordered);
 
 /// <summary>Represents either a source bitmap or a caller-encoded OpenDisplay frame.</summary>

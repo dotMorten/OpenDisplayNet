@@ -22,7 +22,7 @@ sealed class App : Component
         var (client, setClient) = UseState<OpenDisplayClient?>(null);
         var (display, setDisplay) = UseState<DisplayInformation?>(null);
         var (imagePath, setImagePath) = UseState<string?>(null);
-        var (fitIndex, setFitIndex) = UseState(0);
+        var (fitIndex, setFitIndex) = UseState((int)OpenDisplayImageFit.Fill);
         var (ditheringIndex, setDitheringIndex) = UseState(1);
         var (isBusy, setIsBusy) = UseState(false);
         var (status, setStatus) = UseState<string?>(null);
@@ -184,7 +184,7 @@ sealed class App : Component
                 TextBlock(imagePath is null ? "No image selected." : $"Selected image: {imagePath}"),
 
                 Heading("3. Convert and upload").FontSize(20),
-                ComboBox(["Stretch", "Contain", "Cover", "Crop"], fitIndex, setFitIndex)
+                ComboBox(["None", "Fill", "Uniform", "UniformToFill"], fitIndex, setFitIndex)
                     .Header("Image fit")
                     .IsEnabled(!isBusy),
                 ComboBox(["No dithering", "Ordered dithering"], ditheringIndex, setDitheringIndex)

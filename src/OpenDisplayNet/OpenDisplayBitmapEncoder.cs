@@ -60,7 +60,7 @@ internal static class OpenDisplayBitmapEncoder
         graphics.CompositingQuality = CompositingQuality.HighQuality;
         graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
         graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-        if (fit == OpenDisplayImageFit.Crop)
+        if (fit == OpenDisplayImageFit.None)
         {
             int sourceWidth = Math.Min(source.Width, width);
             int sourceHeight = Math.Min(source.Height, height);
@@ -80,9 +80,9 @@ internal static class OpenDisplayBitmapEncoder
 
         Rectangle destination = fit switch
         {
-            OpenDisplayImageFit.Stretch => new Rectangle(0, 0, width, height),
-            OpenDisplayImageFit.Contain => FitRectangle(source.Size, new Size(width, height), cover: false),
-            OpenDisplayImageFit.Cover => FitRectangle(source.Size, new Size(width, height), cover: true),
+            OpenDisplayImageFit.Fill => new Rectangle(0, 0, width, height),
+            OpenDisplayImageFit.Uniform => FitRectangle(source.Size, new Size(width, height), cover: false),
+            OpenDisplayImageFit.UniformToFill => FitRectangle(source.Size, new Size(width, height), cover: true),
             _ => throw new ArgumentOutOfRangeException(nameof(fit)),
         };
         graphics.DrawImage(source, destination);

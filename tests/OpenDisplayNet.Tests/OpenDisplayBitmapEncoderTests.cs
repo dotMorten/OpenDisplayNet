@@ -61,7 +61,7 @@ public sealed class OpenDisplayBitmapEncoderTests
     }
 
     [Fact]
-    public void CropFit_CenterCropsWithoutRescaling()
+    public void NoneFit_CentersWithoutRescaling()
     {
         using Bitmap bitmap = CreateBitmap(4, 1, [Color.Black, Color.White, Color.Black, Color.White]);
 
@@ -70,7 +70,7 @@ public sealed class OpenDisplayBitmapEncoderTests
             OpenDisplayBitmapEncoder.Encode(
                 bitmap,
                 new OpenDisplayPanelSize(2, 1, OpenDisplayColorScheme.Monochrome),
-                new OpenDisplayImageOptions(OpenDisplayImageFit.Crop, OpenDisplayDithering.None)));
+                new OpenDisplayImageOptions(OpenDisplayImageFit.None, OpenDisplayDithering.None)));
     }
 
     private static byte[] Encode(Bitmap bitmap, OpenDisplayColorScheme colorScheme)
