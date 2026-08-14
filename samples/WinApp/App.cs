@@ -115,14 +115,14 @@ sealed class App : Component
                         {
                             setIsBusy(false);
                         }
-                    }).IsEnabled(!isBusy && canConnect),
+                    }).IsEnabled(!isBusy && canConnect).VAlign(VerticalAlignment.Bottom),
                     Button("Disconnect", () =>
                     {
                         client?.Dispose();
                         setClient(null);
                         setDisplay(null);
                         setStatus("Disconnected.");
-                    }).IsEnabled(client is not null)
+                    }).IsEnabled(client is not null).VAlign(VerticalAlignment.Bottom)
                 ),
 
                 When(display is not null, () => DisplayDetails(display!)),
