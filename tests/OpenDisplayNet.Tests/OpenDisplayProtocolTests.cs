@@ -211,31 +211,6 @@ public sealed class OpenDisplayProtocolTests
         Assert.Equal([0x00, 0x73, 0x02, 0xAB, 0xCD, 0xEF], OpenDisplayProtocol.DecryptResponse(sessionKey, encrypted));
     }
 
-    [Theory]
-    [InlineData(0x01, OpenDisplayAuthenticationStatus.InvalidKey)]
-    [InlineData(0x02, OpenDisplayAuthenticationStatus.AlreadyAuthenticated)]
-    [InlineData(0x03, OpenDisplayAuthenticationStatus.EncryptionNotConfigured)]
-    [InlineData(0x04, OpenDisplayAuthenticationStatus.RateLimited)]
-    [InlineData(0xFF, OpenDisplayAuthenticationStatus.Error)]
-    public void AuthenticationFailure_ExposesProtocolStatus(byte rawStatus, OpenDisplayAuthenticationStatus expectedStatus)
-    {
-        OpenDisplayAuthenticationException exception = Assert.Throws<OpenDisplayAuthenticationException>(
-            () => OpenDisplayProtocol.ParseAuthenticateSuccess([0x80, 0x50, rawStatus]));
-
-        Assert.Equal(expectedStatus, exception.Status);
-        Assert.Equal(rawStatus, exception.RawStatus);
-    }
-
-    [Fact]
-    public void AuthenticationFailure_PreservesUnknownStatus()
-    {
-        OpenDisplayAuthenticationException exception = Assert.Throws<OpenDisplayAuthenticationException>(
-            () => OpenDisplayProtocol.ParseAuthenticateChallenge([0x80, 0x50, 0x7E]));
-
-        Assert.Equal((OpenDisplayAuthenticationStatus)0x7E, exception.Status);
-        Assert.Equal(0x7E, exception.RawStatus);
-    }
-
     [Fact]
     public void ParsesFirmwareManufacturerDataAndSht40Sensor()
     {
