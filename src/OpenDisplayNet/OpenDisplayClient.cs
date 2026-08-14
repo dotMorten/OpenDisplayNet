@@ -9,7 +9,7 @@ using Windows.Security.Cryptography;
 namespace OpenDisplayNet;
 
 /// <summary>Connects to an OpenDisplay peripheral and uploads monochrome display frames.</summary>
-public sealed class OpenDisplayClient : IAsyncDisposable
+public sealed class OpenDisplayClient : IDisposable
 {
     /// <summary>The UUID used for OpenDisplay's GATT service and characteristic.</summary>
     public static readonly Guid ServiceUuid = new("00002446-0000-1000-8000-00805F9B34FB");
@@ -102,7 +102,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
                 .ConfigureAwait(false);
             if (notificationStatus != GattCommunicationStatus.Success)
             {
-                await client.DisposeAsync().ConfigureAwait(false);
+                client.Dispose();
                 throw new InvalidOperationException($"OpenDisplay notifications could not be enabled ({notificationStatus}).");
             }
 
@@ -614,7 +614,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (disposed)
         {
@@ -627,7 +627,6 @@ public sealed class OpenDisplayClient : IAsyncDisposable
         writeLock.Dispose();
         service.Dispose();
         device.Dispose();
-        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     private async Task<byte> WriteAndAwaitAcknowledgementAsync(

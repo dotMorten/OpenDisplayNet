@@ -50,7 +50,7 @@ if (selectedDevice is null)
 Console.WriteLine($"Connecting to {selectedDevice.Name}...");
 try
 {
-    await using OpenDisplayClient client = await OpenDisplayClient.ConnectAsync(selectedDevice, cancellation.Token);
+    using OpenDisplayClient client = await OpenDisplayClient.ConnectAsync(selectedDevice, cancellation.Token);
 
     OpenDisplayPanelSize panelSize = await client.GetPanelSizeAsync(cancellation.Token);
     OpenDisplayFirmwareVersion firmware = await client.GetFirmwareVersionAsync(cancellation.Token);
