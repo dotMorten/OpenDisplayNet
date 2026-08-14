@@ -32,8 +32,10 @@ public sealed class OpenDisplayProtocolPortedTests
         OpenDisplayAuthenticationException success = Assert.Throws<OpenDisplayAuthenticationException>(
             () => OpenDisplayProtocol.ParseAuthenticateSuccess([0, 0x50, status, .. new byte[16]]));
 
-        Assert.Equal(status, challenge.Status);
-        Assert.Equal(status, success.Status);
+        Assert.Equal((OpenDisplayAuthenticationStatus)status, challenge.Status);
+        Assert.Equal((OpenDisplayAuthenticationStatus)status, success.Status);
+        Assert.Equal(status, challenge.RawStatus);
+        Assert.Equal(status, success.RawStatus);
     }
 
     [Fact]
@@ -128,8 +130,8 @@ public sealed class OpenDisplayProtocolPortedTests
 
         Assert.Equal(
             [
-                new OpenDisplaySensorReading(1, 4, 0, 50),
-                new OpenDisplaySensorReading(2, 4, 22.4, 47.1),
+                new OpenDisplaySensorReading(1, OpenDisplaySensorType.Sht40, 0, 50),
+                new OpenDisplaySensorReading(2, OpenDisplaySensorType.Sht40, 22.4, 47.1),
             ],
             readings);
 
