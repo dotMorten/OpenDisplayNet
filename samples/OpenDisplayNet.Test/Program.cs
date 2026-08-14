@@ -64,15 +64,8 @@ try
 
     Console.WriteLine($"Sending a {panelSize.Width}x{panelSize.Height} {panelSize.ColorScheme} test pattern...");
     byte[] testPattern = CreateTestPattern(panelSize);
-    if (panelSize.ColorScheme == OpenDisplayColorScheme.Monochrome)
-    {
-        await client.SendMonochromeImageAsync(panelSize.Width, panelSize.Height, testPattern, cancellation.Token);
-    }
-    else
-    {
-        using OpenDisplayImage image = new(testPattern);
-        await client.SendImageAsync(image, cancellation.Token);
-    }
+    using OpenDisplayImage image = new(testPattern);
+    await client.SendImageAsync(image, cancellation.Token);
 
     Console.WriteLine("Test pattern sent.");
 }

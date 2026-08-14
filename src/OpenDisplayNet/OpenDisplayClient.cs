@@ -116,38 +116,6 @@ public sealed class OpenDisplayClient : IDisposable
         }
     }
 
-    /// <summary>
-    /// Sends a full 1-bit monochrome frame. Pixels are packed MSB-first, where 0 is black and 1 is white.
-    /// </summary>
-    public async Task SendMonochromeImageAsync(
-        int width,
-        int height,
-        ReadOnlyMemory<byte> pixels,
-        CancellationToken cancellationToken = default)
-    {
-        ThrowIfDisposed();
-
-        if (width <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(width), "Width must be positive.");
-        }
-
-        if (height <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(height), "Height must be positive.");
-        }
-
-        int expectedLength = checked(((width + 7) / 8) * height);
-        if (pixels.Length != expectedLength)
-        {
-            throw new ArgumentException(
-                $"A {width}x{height} monochrome frame must contain {expectedLength} bytes.",
-                nameof(pixels));
-        }
-
-        await SendEncodedImageAsync(pixels, cancellationToken).ConfigureAwait(false);
-    }
-
     /// <summary>Converts and uploads an OpenDisplay image to the connected panel.</summary>
     public async Task SendImageAsync(OpenDisplayImage image, CancellationToken cancellationToken = default)
     {
