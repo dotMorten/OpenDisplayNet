@@ -1,7 +1,9 @@
 <Solution>
   <Folder Name="/samples/">
     <Project Path="samples/ConsoleTest/ConsoleTest.csproj" />
-    <Project Path="samples/WinApp/WinApp.csproj" />
+    <Project Path="samples/WinApp/WinApp.csproj">
+      <Platform Solution="Debug|*" Project="X64" />
+    </Project>
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/OpenDisplayNet/OpenDisplayNet.csproj" />
