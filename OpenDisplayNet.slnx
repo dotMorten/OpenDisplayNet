@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/OpenDisplayNet.Test/OpenDisplayNet.Test.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/OpenDisplayNet/OpenDisplayNet.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenDisplayNet.Tests/OpenDisplayNet.Tests.csproj" />
+  </Folder>
+</Solution>
