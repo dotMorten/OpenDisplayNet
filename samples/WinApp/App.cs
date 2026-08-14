@@ -54,32 +54,35 @@ sealed class App : Component
                 TextBlock("Discover an OpenDisplay device, inspect its configuration, then upload a panel-aware image."),
 
                 Heading("1. Discover and connect").FontSize(20),
-                HStack(8,
-                    Button("Discover devices", async () =>
+                Button("Discover devices", async () =>
+                {
+                    setIsBusy(true);
+                    setError(null);
+                    setStatus("Scanning for OpenDisplay devices...");
+                    try
                     {
-                        setIsBusy(true);
-                        setError(null);
-                        setStatus("Scanning for OpenDisplay devices...");
-                        try
-                        {
-                            IReadOnlyList<OpenDisplayDevice> discovered = await OpenDisplayDiscovery
-                                .DiscoverAsync(TimeSpan.FromSeconds(8));
-                            setDevices(discovered);
-                            setSelectedDeviceIndex(0);
-                            setStatus(discovered.Count == 0
-                                ? "No OpenDisplay devices were found."
-                                : $"Found {discovered.Count} device(s).");
-                        }
-                        catch (Exception exception)
-                        {
-                            setError(exception.Message);
-                            setStatus(null);
-                        }
-                        finally
-                        {
-                            setIsBusy(false);
-                        }
-                    }).IsEnabled(!isBusy),
+                        IReadOnlyList<OpenDisplayDevice> discovered = await OpenDisplayDiscovery
+                            .DiscoverAsync(TimeSpan.FromSeconds(8));
+                        setDevices(discovered);
+                        setSelectedDeviceIndex(0);
+                        setStatus(discovered.Count == 0
+                            ? "No OpenDisplay devices were found."
+                            : $"Found {discovered.Count} device(s).");
+                    }
+                    catch (Exception exception)
+                    {
+                        setError(exception.Message);
+                        setStatus(null);
+                    }
+                    finally
+                    {
+                        setIsBusy(false);
+                    }
+                }).IsEnabled(!isBusy),
+                HStack(8,
+                    ComboBox(deviceNames, selectedDeviceIndex, setSelectedDeviceIndex)
+                        .Header("Discovered device")
+                        .IsEnabled(!isBusy && deviceNames.Length > 0),
                     Button("Connect", async () =>
                     {
                         if (!canConnect)
@@ -121,9 +124,6 @@ sealed class App : Component
                         setStatus("Disconnected.");
                     }).IsEnabled(client is not null)
                 ),
-                ComboBox(deviceNames, selectedDeviceIndex, setSelectedDeviceIndex)
-                    .Header("Discovered device")
-                    .IsEnabled(!isBusy && deviceNames.Length > 0),
 
                 When(display is not null, () => DisplayDetails(display!)),
 
