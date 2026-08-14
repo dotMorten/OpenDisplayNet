@@ -160,19 +160,53 @@ static void WriteDeviceInformation(
     Console.WriteLine($"  Panel: {panelSize.Width}x{panelSize.Height}, {panelSize.ColorScheme} ({(byte)panelSize.ColorScheme})");
     Console.WriteLine($"  Firmware: {firmware.Major}.{firmware.Minor}.{firmware.Patch} ({firmware.Sha})");
     Console.WriteLine($"  Manufacturer data: {Convert.ToHexString(manufacturerData)}");
+    WriteAdvertisementTelemetry(manufacturerData);
 
     if (sensors.Count == 0)
     {
-        Console.WriteLine("  Sensors: none reported");
+        Console.WriteLine("  Configured SHT40 sensors: none reported");
         return;
     }
 
-    Console.WriteLine("  Sensors:");
+    Console.WriteLine("  Configured SHT40 sensors:");
     foreach (OpenDisplaySensorReading sensor in sensors)
     {
         Console.WriteLine(
             $"    {sensor.InstanceNumber}: {sensor.SensorType} ({(ushort)sensor.SensorType}), " +
             $"{sensor.TemperatureCelsius:F1} C, {sensor.HumidityPercent:F1}% RH");
+    }
+}
+
+static void WriteAdvertisementTelemetry(ReadOnlySpan<byte> manufacturerData)
+{
+    const byte manufacturerIdLow = 0x46;
+    const byte manufacturerIdHigh = 0x24;
+    if (manufacturerData.Length >= 2 &&
+        manufacturerData[0] == manufacturerIdLow &&
+        manufacturerData[1] == manufacturerIdHigh)
+    {
+        manufacturerData = manufacturerData[2..];
+    }
+
+    if (manufacturerData.Length >= 14)
+    {
+        double chipTemperature = manufacturerData[11] / 2d - 40d;
+        int batteryMillivolts = (manufacturerData[12] | ((manufacturerData[13] & 1) << 8)) * 10;
+        bool rebooted = (manufacturerData[13] & 0x02) != 0;
+        bool connectionRequested = (manufacturerData[13] & 0x04) != 0;
+        int loopCounter = manufacturerData[13] >> 4;
+        Console.WriteLine($"  MCU chip temperature: {chipTemperature:F1} C");
+        Console.WriteLine($"  Battery voltage: {batteryMillivolts} mV");
+        Console.WriteLine($"  Rebooted: {rebooted}, connection requested: {connectionRequested}, loop counter: {loopCounter}");
+        return;
+    }
+
+    if (manufacturerData.Length >= 11)
+    {
+        int batteryMillivolts = manufacturerData[7] | (manufacturerData[8] << 8);
+        Console.WriteLine($"  MCU chip temperature: {(sbyte)manufacturerData[9]} C");
+        Console.WriteLine($"  Battery voltage: {batteryMillivolts} mV");
+        Console.WriteLine($"  Loop counter: {manufacturerData[10]}");
     }
 }
 
