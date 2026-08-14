@@ -167,8 +167,16 @@ public sealed class OpenDisplayProtocolTests
         configuration[offset + 2 + 5] = 0x01;
         configuration[offset + 2 + 6] = 0x80;
         configuration[offset + 2 + 7] = 0x02;
+        configuration[offset + 2 + 21] = (byte)OpenDisplayColorScheme.Gray4;
 
-        Assert.Equal(new OpenDisplayPanelSize(296, 640, 0), OpenDisplayProtocol.ParsePanelSize(configuration));
+        Assert.Equal(
+            new OpenDisplayPanelSize(296, 640, OpenDisplayColorScheme.Gray4),
+            OpenDisplayProtocol.ParsePanelSize(configuration));
+
+        configuration[offset + 2 + 21] = 0xFE;
+        Assert.Equal(
+            (OpenDisplayColorScheme)0xFE,
+            OpenDisplayProtocol.ParsePanelSize(configuration).ColorScheme);
     }
 
     [Fact]
@@ -258,8 +266,17 @@ public sealed class OpenDisplayProtocolTests
         manufacturerData[11] = 0x09;
 
         Assert.Equal(
-            [new OpenDisplaySensorReading(2, 4, 22.4, 47.1)],
+            [new OpenDisplaySensorReading(2, OpenDisplaySensorType.Sht40, 22.4, 47.1)],
             OpenDisplayProtocol.ReadSht40Sensors(configuration, manufacturerData));
+    }
+
+    [Fact]
+    public void ProtocolIdentifierEnums_PreserveWireValues()
+    {
+        Assert.Equal(5, (byte)OpenDisplayColorScheme.Gray4);
+        Assert.Equal(4, (ushort)OpenDisplaySensorType.Sht40);
+        Assert.Equal(0xFE, (byte)(OpenDisplayColorScheme)0xFE);
+        Assert.Equal(0xFFFE, (ushort)(OpenDisplaySensorType)0xFFFE);
     }
 
     [Fact]

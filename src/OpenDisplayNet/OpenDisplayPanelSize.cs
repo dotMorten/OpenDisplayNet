@@ -1,4 +1,4 @@
 namespace OpenDisplayNet;
 
 /// <summary>The pixel dimensions reported by an OpenDisplay panel.</summary>
-public sealed record OpenDisplayPanelSize(int Width, int Height, byte ColorScheme);
+public sealed record OpenDisplayPanelSize(int Width, int Height, OpenDisplayColorScheme ColorScheme);
