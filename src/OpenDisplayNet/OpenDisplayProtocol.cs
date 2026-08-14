@@ -220,7 +220,7 @@ internal static class OpenDisplayProtocol
 
         if (response[2] != 0)
         {
-            throw new OpenDisplayAuthenticationException(response[2]);
+            throw new OpenDisplayAuthenticationException((OpenDisplayAuthenticationStatus)response[2]);
         }
 
         if (response.Length < 19)
@@ -241,7 +241,7 @@ internal static class OpenDisplayProtocol
 
         if (response[2] != 0)
         {
-            throw new OpenDisplayAuthenticationException(response[2]);
+            throw new OpenDisplayAuthenticationException((OpenDisplayAuthenticationStatus)response[2]);
         }
 
         if (response.Length < 19)

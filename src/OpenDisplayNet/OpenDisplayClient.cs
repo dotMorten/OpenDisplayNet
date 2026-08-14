@@ -191,7 +191,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
                                 await ReadRawNotificationAsync(CommandTimeout, cancellationToken).ConfigureAwait(false));
                             break;
                         }
-                        catch (OpenDisplayAuthenticationException exception) when (exception.Status == 0x02 && attempt == 0)
+                        catch (OpenDisplayAuthenticationException exception) when (exception.Status == OpenDisplayAuthenticationStatus.AlreadyAuthenticated && attempt == 0)
                         {
                         }
                     }
@@ -212,7 +212,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
                         proof,
                         OpenDisplayProtocol.ComputeServerProof(derivedKey, serverNonce, clientNonce, deviceId)))
                     {
-                        throw new OpenDisplayAuthenticationException(0x01);
+                        throw new OpenDisplayAuthenticationException(OpenDisplayAuthenticationStatus.InvalidKey);
                     }
 
                     sessionKey = derivedKey;
@@ -828,7 +828,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
 
         if (response.Length == 3 && response[2] == 0xFE)
         {
-            throw new OpenDisplayAuthenticationException(response[2]);
+            throw new OpenDisplayAuthenticationException((OpenDisplayAuthenticationStatus)response[2]);
         }
 
         if (response.Length == 3 && response[2] == 0xFF)
