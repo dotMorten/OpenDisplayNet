@@ -277,6 +277,21 @@ public sealed class OpenDisplayProtocolTests
     }
 
     [Fact]
+    public void ManufacturerData_ParsesLegacyFormat()
+    {
+        OpenDisplayManufacturerData manufacturerData = OpenDisplayManufacturerData.Parse(
+            [0, 0, 0, 0, 0, 0, 0, 0xBC, 0x0A, unchecked((byte)-5), 42]);
+
+        Assert.Equal(OpenDisplayManufacturerDataFormat.Legacy, manufacturerData.Format);
+        Assert.Equal(2748, manufacturerData.BatteryMillivolts);
+        Assert.Equal(-5, manufacturerData.ChipTemperatureCelsius);
+        Assert.Equal((byte)42, manufacturerData.LoopCounter);
+        Assert.Null(manufacturerData.Rebooted);
+        Assert.Null(manufacturerData.ConnectionRequested);
+        Assert.Empty(manufacturerData.DynamicData.ToArray());
+    }
+
+    [Fact]
     public void ProtocolIdentifierEnums_PreserveWireValues()
     {
         Assert.Equal(5, (byte)OpenDisplayColorScheme.Gray4);
