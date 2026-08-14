@@ -104,8 +104,8 @@ public sealed class OpenDisplayProtocolPortedTests
         Assert.Throws<InvalidOperationException>(
             () => OpenDisplayProtocol.ParseFirmwareVersion([0, 0x43, 1, 5, 1, 0xFF]));
 
-        byte[] data = Enumerable.Range(0, 16).Select(value => (byte)value).ToArray();
-        Assert.Equal(data, OpenDisplayProtocol.ParseManufacturerData([0x80, 0x44, .. data]));
+        byte[] data = [0x46, 0x24, .. new byte[11], 80, 0x2C, 0x14];
+        Assert.Equal(data, OpenDisplayProtocol.ParseManufacturerData([0x80, 0x44, .. data]).RawData.ToArray());
         Assert.Throws<InvalidOperationException>(() => OpenDisplayProtocol.ParseManufacturerData([0, 0x44, .. new byte[15]]));
         Assert.Throws<InvalidOperationException>(() => OpenDisplayProtocol.ParseManufacturerData([0, 0x43, .. data]));
     }
@@ -139,6 +139,15 @@ public sealed class OpenDisplayProtocolPortedTests
         Assert.Single(OpenDisplayProtocol.ReadSht40Sensors(configuration, manufacturerData));
         Assert.Empty(OpenDisplayProtocol.ReadSht40Sensors(CreateSensorConfiguration(), manufacturerData));
         Assert.Throws<ArgumentException>(() => OpenDisplayProtocol.ReadSht40Sensors(configuration, new byte[15]));
+    }
+
+    [Fact]
+    public void Sht40Sensors_SkipsExtendedDataConfiguration()
+    {
+        byte[] configuration = new byte[3 + 2 + 288 + 2];
+        configuration[4] = 0x2C;
+
+        Assert.Empty(OpenDisplayProtocol.ReadSht40Sensors(configuration, new byte[16]));
     }
 
     [Fact]

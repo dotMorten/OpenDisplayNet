@@ -9,7 +9,7 @@ using Windows.Security.Cryptography;
 namespace OpenDisplayNet;
 
 /// <summary>Connects to an OpenDisplay peripheral and uploads monochrome display frames.</summary>
-public sealed class OpenDisplayClient : IAsyncDisposable
+public sealed class OpenDisplayClient : IDisposable
 {
     /// <summary>The UUID used for OpenDisplay's GATT service and characteristic.</summary>
     public static readonly Guid ServiceUuid = new("00002446-0000-1000-8000-00805F9B34FB");
@@ -102,7 +102,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
                 .ConfigureAwait(false);
             if (notificationStatus != GattCommunicationStatus.Success)
             {
-                await client.DisposeAsync().ConfigureAwait(false);
+                client.Dispose();
                 throw new InvalidOperationException($"OpenDisplay notifications could not be enabled ({notificationStatus}).");
             }
 
@@ -243,8 +243,8 @@ public sealed class OpenDisplayClient : IAsyncDisposable
                 }
             }
 
-    /// <summary>Reads the 16-byte manufacturer-specific data record broadcast by the device.</summary>
-    public async Task<byte[]> GetManufacturerDataAsync(CancellationToken cancellationToken = default)
+    /// <summary>Reads the manufacturer-specific telemetry record broadcast by the device.</summary>
+    public async Task<OpenDisplayManufacturerData> GetManufacturerDataAsync(CancellationToken cancellationToken = default)
             {
                 ThrowIfDisposed();
                 await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -266,8 +266,8 @@ public sealed class OpenDisplayClient : IAsyncDisposable
                 try
                 {
                     byte[] configuration = await ReadConfigurationAsync(cancellationToken).ConfigureAwait(false);
-                    byte[] manufacturerData = await ReadManufacturerDataAsync(cancellationToken).ConfigureAwait(false);
-                    return OpenDisplayProtocol.ReadSht40Sensors(configuration, manufacturerData);
+                    OpenDisplayManufacturerData manufacturerData = await ReadManufacturerDataAsync(cancellationToken).ConfigureAwait(false);
+                    return OpenDisplayProtocol.ReadSht40Sensors(configuration, manufacturerData.RawData.Span);
                 }
                 finally
                 {
@@ -614,7 +614,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (disposed)
         {
@@ -627,7 +627,6 @@ public sealed class OpenDisplayClient : IAsyncDisposable
         writeLock.Dispose();
         service.Dispose();
         device.Dispose();
-        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     private async Task<byte> WriteAndAwaitAcknowledgementAsync(
@@ -896,7 +895,7 @@ public sealed class OpenDisplayClient : IAsyncDisposable
         return configuration.Take(totalLength).ToArray();
     }
 
-    private async Task<byte[]> ReadManufacturerDataAsync(CancellationToken cancellationToken)
+    private async Task<OpenDisplayManufacturerData> ReadManufacturerDataAsync(CancellationToken cancellationToken)
     {
         ClearNotifications();
         await WriteAsync(

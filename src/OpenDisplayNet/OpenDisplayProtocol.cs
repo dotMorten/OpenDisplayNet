@@ -127,7 +127,7 @@ internal static class OpenDisplayProtocol
         return new OpenDisplayFirmwareVersion(response[2], response[3], sha, patch);
     }
 
-    public static byte[] ParseManufacturerData(ReadOnlySpan<byte> response)
+    public static OpenDisplayManufacturerData ParseManufacturerData(ReadOnlySpan<byte> response)
     {
         ValidateResponseOpcode(response, ReadManufacturerData);
         if (response.Length != 18)
@@ -135,7 +135,7 @@ internal static class OpenDisplayProtocol
             throw new InvalidOperationException("OpenDisplay returned an invalid manufacturer data response.");
         }
 
-        return response[2..].ToArray();
+        return OpenDisplayManufacturerData.Parse(response[2..]);
     }
 
     public static IReadOnlyList<OpenDisplaySensorReading> ReadSht40Sensors(
@@ -650,6 +650,7 @@ internal static class OpenDisplayProtocol
         [0x29] = 32,
         [0x2A] = 32,
         [0x2B] = 32,
+        [0x2C] = 288,
     };
 }
 
