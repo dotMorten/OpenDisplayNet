@@ -150,7 +150,7 @@ internal static class OpenDisplayProtocol
         const int outerHeaderLength = 3;
         const int crcLength = 2;
         const byte sensorPacketId = 0x23;
-        const ushort sht40 = 4;
+        const OpenDisplaySensorType sht40 = OpenDisplaySensorType.Sht40;
         List<OpenDisplaySensorReading> readings = [];
         int offset = outerHeaderLength;
         int end = configuration.Length - crcLength;
@@ -175,7 +175,7 @@ internal static class OpenDisplayProtocol
 
             ReadOnlySpan<byte> packet = configuration.Slice(offset, packetSize);
             offset += packetSize;
-            if (packetId != sensorPacketId || BinaryPrimitives.ReadUInt16LittleEndian(packet.Slice(1, 2)) != sht40)
+            if (packetId != sensorPacketId || BinaryPrimitives.ReadUInt16LittleEndian(packet.Slice(1, 2)) != (ushort)sht40)
             {
                 continue;
             }
@@ -625,7 +625,7 @@ internal static class OpenDisplayProtocol
                     throw new InvalidOperationException("OpenDisplay returned invalid panel dimensions.");
                 }
 
-                return new OpenDisplayPanelSize(width, height, configuration[offset + 21]);
+                return new OpenDisplayPanelSize(width, height, (OpenDisplayColorScheme)configuration[offset + 21]);
             }
 
             offset += packetSize;

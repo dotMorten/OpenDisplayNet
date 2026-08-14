@@ -62,14 +62,14 @@ try
     Console.WriteLine($"Sending a {panelSize.Width}x{panelSize.Height} test pattern...");
     switch (panelSize.ColorScheme)
     {
-        case 0:
+        case OpenDisplayColorScheme.Monochrome:
             await client.SendMonochromeImageAsync(
                 panelSize.Width,
                 panelSize.Height,
                 CreateTestPattern(panelSize.Width, panelSize.Height),
                 cancellation.Token);
             break;
-        case 5:
+        case OpenDisplayColorScheme.Gray4:
             await client.SendImageAsync(
                 CreateGray4TestPattern(panelSize.Width, panelSize.Height),
                 cancellation.Token);
